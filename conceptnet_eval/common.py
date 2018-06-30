@@ -8,13 +8,15 @@ BASE_URL = "http://34.239.143.232"  # "http://api.conceptnet.io"
 MAX_RETRIES = 3
 
 
-def get_uri_for_keyword(keyword, language="en"):
+def get_uri_for_keyword(keyword, language="en", mode="remote"):
     url = "{}/uri?language={}&text={}".format(BASE_URL, language, keyword)
-    try:
-        res = get_response(url)
-        return res["@id"]
-    except RuntimeError:
-        return keyword.lower().replace(" ", "_")
+    if mode == "remote":
+        try:
+            res = get_response(url)
+            return res["@id"]
+        except RuntimeError:
+            pass
+    return "/c/{}/{}".format(language, keyword.lower().replace(" ", "_"))
 
 
 def get_keyword_for_uri(uri):
