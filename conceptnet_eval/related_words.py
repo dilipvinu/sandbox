@@ -8,6 +8,8 @@ NOUN_RELATIONS = ("RelatedTo", "IsA", "PartOf", "HasA", "Synonym", "DerivedFrom"
 VERB_RELATIONS = ("UsedFor", "CapableOf", "Causes", "MannerOf", "ReceivesAction")
 ADJECTIVE_RELATIONS = ("HasProperty", "SymbolOf", "MadeOf")
 
+RUN_MODE = "local"
+
 
 # def get_related_words(keyword, category, language="en"):
 #     related_words = []
@@ -32,7 +34,7 @@ ADJECTIVE_RELATIONS = ("HasProperty", "SymbolOf", "MadeOf")
 
 
 def get_related_words(keyword, category, relation_set, language="en"):
-    mode = "local"
+    mode = RUN_MODE
     related_words = []
     related_categories = []
     keyword_uri = get_uri_for_keyword(keyword, language=language, mode=mode)
@@ -132,6 +134,7 @@ def query(params, limit=1000, mode="remote"):
             if not edges:
                 break
             all_edges.extend(edges)
+            offset += limit
     return all_edges
 
 
