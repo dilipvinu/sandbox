@@ -40,7 +40,7 @@ def get_related_words(keyword, category, relation_set, language="en"):
     for relation in relation_set:
         words_with_relation = get_words_with_relation(keyword_uri, relation, language, mode)
         related_words.extend(words_with_relation)
-        categories_with_relation = get_words_with_relation(category_uri, relation, language)
+        categories_with_relation = get_words_with_relation(category_uri, relation, language, mode)
         related_categories.extend(categories_with_relation)
     related_words_with_weight = []
     for related_word in related_words:
@@ -108,7 +108,7 @@ def query(params, limit=1000, mode="remote"):
     all_edges = []
     if mode == "remote":
         url = "{}/query?limit={}".format(BASE_URL, limit)
-        for key, value in params:
+        for key, value in params.items():
             url += "&{}={}".format(key, value)
         while True:
             try:
