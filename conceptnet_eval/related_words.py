@@ -203,7 +203,9 @@ def compare_interests(filename):
                              # 'CN Keyword Nouns', 'CN Category Nouns', 'CN Keyword Verbs', 'CN Category Verbs',
                              # 'CN Keyword Adjectives', 'CN Category Adjectives',
                              'CN Related Keywords', 'CN Related Categories',
-                             'CN Keywords Loop', 'CN Categories Loop'])
+                             # 'CN Keywords Loop', 'CN Categories Loop',
+                             'CN Related Related Keywords'
+                             ])
         row_count = 0
         for row in csv_reader:
             keyword = row[0]
@@ -215,6 +217,11 @@ def compare_interests(filename):
             # ck_verbs, cc_verbs = get_related_words(keyword, category, VERB_RELATIONS)
             # ck_adjectives, cc_adjectives = get_related_words(keyword, category, ADJECTIVE_RELATIONS)
             cn_keywords, cn_categories = get_related_words(keyword, category, ALL_RELATIONS)
+            related_related_words = []
+            for cn_keyword in cn_keywords:
+                if cn_keyword[1] > 0.0:
+                    related_words, dummy = get_related_words(cn_keyword[0], category, ALL_RELATIONS)
+                    related_related_words.extend(related_words)
             cn_keywords_loop = get_cross_relations(cn_keywords, cn_categories, mode=RUN_MODE)
             cn_categories_loop = get_cross_relations(cn_categories, cn_keywords, mode=RUN_MODE)
 
@@ -222,7 +229,9 @@ def compare_interests(filename):
                                  # to_str(ck_nouns), to_str(cc_nouns), to_str(ck_verbs), to_str(cc_verbs),
                                  # to_str(ck_adjectives), to_str(cc_adjectives),
                                  to_str(cn_keywords), to_str(cn_categories),
-                                 to_str_2(cn_keywords_loop), to_str_2(cn_categories_loop)])
+                                 # to_str_2(cn_keywords_loop), to_str_2(cn_categories_loop)
+                                 to_str(related_related_words)
+                                 ])
             row_count += 1
             if row_count == 10:
                 break
