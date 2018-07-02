@@ -7,8 +7,16 @@ from conceptnet_eval.common import BASE_URL, get_keyword_for_uri, get_response, 
 NOUN_RELATIONS = ("RelatedTo", "IsA", "PartOf", "HasA", "Synonym", "DerivedFrom", "DefinedAs", "SimilarTo")
 VERB_RELATIONS = ("UsedFor", "CapableOf", "Causes", "MannerOf", "ReceivesAction")
 ADJECTIVE_RELATIONS = ("HasProperty", "SymbolOf", "MadeOf")
+ALL_RELATIONS = ("RelatedTo", "FormOf", "IsA", "PartOf", "HasA", "UsedFor", "CapableOf", "AtLocation",
+                 "Causes", "HasSubevent", "HasFirstSubevent", "HasLastSubevent", "HasPrerequisite", "HasProperty",
+                 "MotivatedByGoal", "ObstructedBy", "Desires", "CreatedBy", "Synonym", "Antonym", "DistinctFrom",
+                 "DerivedFrom", "SymbolOf", "DefinedAs", "Entails", "MannerOf", "LocatedNear", "HasContext",
+                 "SimilarTo", "EtymologicallyRelatedTo", "EtymologicallyDerivedFrom", "CausesDesire", "MadeOf",
+                 "ReceivesAction", "InstanceOf", "dbpedia/genre", "dbpedia/influencedBy", "dbpedia/knownFor",
+                 "dbpedia/occupation", "dbpedia/language", "dbpedia/field", "dbpedia/product", "dbpedia/capital",
+                 "dbpedia/leader")
 
-RUN_MODE = "local"
+RUN_MODE = "remote"
 
 
 # def get_related_words(keyword, category, language="en"):
@@ -35,15 +43,15 @@ RUN_MODE = "local"
 
 def get_related_words(keyword, category, relation_set, language="en"):
     mode = RUN_MODE
-    related_words = []
-    related_categories = []
+    related_words = set()
+    related_categories = set()
     keyword_uri = get_uri_for_keyword(keyword, language=language, mode=mode)
     category_uri = get_uri_for_keyword(category, language=language, mode=mode)
     for relation in relation_set:
         words_with_relation = get_words_with_relation(keyword_uri, relation, language, mode)
-        related_words.extend(words_with_relation)
+        related_words.update(words_with_relation)
         categories_with_relation = get_words_with_relation(category_uri, relation, language, mode)
-        related_categories.extend(categories_with_relation)
+        related_categories.update(categories_with_relation)
     related_words_with_weight = []
     for related_word in related_words:
         related_word_uri = get_uri_for_keyword(related_word, language=language, mode=mode)
@@ -75,8 +83,6 @@ def get_words_with_relation(keyword_uri, relation="RelatedTo", language="en", mo
         else:
             other = start
         if other["language"] != language:
-            continue
-        if edge["weight"] < 0.5:
             continue
         related_words.append(other["label"])
     print("{} results".format(len(related_words)))
@@ -166,20 +172,28 @@ def compare_interests(filename):
         next(csv_reader)
         csv_writer = csv.writer(out_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow(['Interest', 'Category', 'Datamuse Nouns', 'Datamuse Verbs', 'Datamuse Adjectives',
-                             'CN Keyword Nouns', 'CN Category Nouns', 'CN Keyword Verbs', 'CN Category Verbs',
-                             'CN Keyword Adjectives', 'CN Category Adjectives'])
+                             # 'CN Keyword Nouns', 'CN Category Nouns', 'CN Keyword Verbs', 'CN Category Verbs',
+                             # 'CN Keyword Adjectives', 'CN Category Adjectives',
+                             'CN Related Keywords', 'CN Related Categories'])
+        row_count = 0
         for row in csv_reader:
             keyword = row[0]
             category = row[1]
             d_nouns = row[2]
             d_verbs = row[3]
             d_adjectives = row[4]
-            ck_nouns, cc_nouns = get_related_words(keyword, category, NOUN_RELATIONS)
-            ck_verbs, cc_verbs = get_related_words(keyword, category, VERB_RELATIONS)
-            ck_adjectives, cc_adjectives = get_related_words(keyword, category, ADJECTIVE_RELATIONS)
+            # ck_nouns, cc_nouns = get_related_words(keyword, category, NOUN_RELATIONS)
+            # ck_verbs, cc_verbs = get_related_words(keyword, category, VERB_RELATIONS)
+            # ck_adjectives, cc_adjectives = get_related_words(keyword, category, ADJECTIVE_RELATIONS)
+            cn_keywords, cn_categories = get_related_words(keyword, category, ALL_RELATIONS)
 
-            csv_writer.writerow([keyword, category, d_nouns, d_verbs, d_adjectives, to_str(ck_nouns), to_str(cc_nouns),
-                                 to_str(ck_verbs), to_str(cc_verbs), to_str(ck_adjectives), to_str(cc_adjectives)])
+            csv_writer.writerow([keyword, category, d_nouns, d_verbs, d_adjectives,
+                                 # to_str(ck_nouns), to_str(cc_nouns), to_str(ck_verbs), to_str(cc_verbs),
+                                 # to_str(ck_adjectives), to_str(cc_adjectives),
+                                 to_str(cn_keywords), to_str(cn_categories)])
+            row_count += 1
+            if row_count == 10:
+                break
 
 
 if __name__ == "__main__":
