@@ -51,7 +51,7 @@ def get_related_words(keyword, category, relation_set, language="en"):
         max_weight = 0.0
         for relation in relations:
             max_weight = max(max_weight, relation["weight"])
-        related_words_with_weight.append((related_word, round(max_weight, 1)))
+        related_words_with_weight.append((related_word, max_weight))
     related_categories_with_weight = []
     for related_category in related_categories:
         related_category_uri = get_uri_for_keyword(related_category, language=language, mode=mode)
@@ -59,7 +59,7 @@ def get_related_words(keyword, category, relation_set, language="en"):
         max_weight = 0.0
         for relation in relations:
             max_weight = max(max_weight, relation["weight"])
-        related_categories_with_weight.append((related_category, round(max_weight, 1)))
+        related_categories_with_weight.append((related_category, max_weight))
     return related_words_with_weight, related_categories_with_weight
 
 
