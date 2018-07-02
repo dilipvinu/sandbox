@@ -52,23 +52,29 @@ def get_related_words(keyword, category, relation_set, language="en"):
         related_words.update(words_with_relation)
         categories_with_relation = get_words_with_relation(category_uri, relation, language, mode)
         related_categories.update(categories_with_relation)
+    related_words_with_weight = get_related_words_with_weight(category_uri, related_words, language, mode)
+    related_categories_with_weight = get_related_words_with_weight(keyword_uri, related_categories, language, mode)
+    return related_words_with_weight, related_categories_with_weight
+
+
+def get_related_words_with_weight(keyword_uri, related_words, language="en", mode="remote"):
     related_words_with_weight = []
     for related_word in related_words:
         related_word_uri = get_uri_for_keyword(related_word, language=language, mode=mode)
-        relations = get_relations(related_word_uri, category_uri, mode)
-        max_weight = 0.0
-        for relation in relations:
-            max_weight = max(max_weight, relation["weight"])
-        related_words_with_weight.append((related_word, max_weight))
-    related_categories_with_weight = []
-    for related_category in related_categories:
-        related_category_uri = get_uri_for_keyword(related_category, language=language, mode=mode)
-        relations = get_relations(keyword_uri, related_category_uri, mode)
-        max_weight = 0.0
-        for relation in relations:
-            max_weight = max(max_weight, relation["weight"])
-        related_categories_with_weight.append((related_category, max_weight))
-    return related_words_with_weight, related_categories_with_weight
+        max_relation = get_max_relation(related_word_uri, keyword_uri, mode)
+        if max_relation:
+            related_words_with_weight.append((related_word, max_relation["weight"]))
+    return related_words_with_weight
+
+
+def get_max_relation(node_uri, other_uri, mode):
+    max_relation = {"weight": 0.0}
+    relations = get_relations(node_uri, other_uri, mode)
+    for relation in relations:
+        if relation["weight"] > max_relation["weight"]:
+            max_relation = relation
+    if max_relation["weight"] > 0.0:
+        return max_relation
 
 
 def get_words_with_relation(keyword_uri, relation="RelatedTo", language="en", mode="remote"):
@@ -161,8 +167,25 @@ def has_common_relations(relations, other_relations):
     return bool(relation_types & other_relation_types)
 
 
+def get_cross_relations(keywords, other_keywords, language="en", mode="remote"):
+    cross_relations = []
+    for keyword in keywords:
+        for other_keyword in other_keywords:
+            keyword_uri = get_uri_for_keyword(keyword, language=language, mode=mode)
+            other_keyword_uri = get_uri_for_keyword(other_keyword, language=language, mode=mode)
+            max_relation = get_max_relation(keyword_uri, other_keyword_uri, mode)
+            if max_relation:
+                cross_relations.append((keyword, other_keyword, max_relation["weight"]))
+    return cross_relations
+
+
 def to_str(tuple_list):
     flat_list = ["{} ({})".format(item[0], item[1]) for item in tuple_list]
+    return ", ".join(flat_list)
+
+
+def to_str_2(tuple_list):
+    flat_list = ["{} - {} ({})".format(item[0], item[1], item[2]) for item in tuple_list]
     return ", ".join(flat_list)
 
 
@@ -174,7 +197,7 @@ def compare_interests(filename):
         csv_writer.writerow(['Interest', 'Category', 'Datamuse Nouns', 'Datamuse Verbs', 'Datamuse Adjectives',
                              # 'CN Keyword Nouns', 'CN Category Nouns', 'CN Keyword Verbs', 'CN Category Verbs',
                              # 'CN Keyword Adjectives', 'CN Category Adjectives',
-                             'CN Related Keywords', 'CN Related Categories'])
+                             'CN Related Keywords', 'CN Related Categories', 'CN Cross Relations'])
         row_count = 0
         for row in csv_reader:
             keyword = row[0]
@@ -186,11 +209,14 @@ def compare_interests(filename):
             # ck_verbs, cc_verbs = get_related_words(keyword, category, VERB_RELATIONS)
             # ck_adjectives, cc_adjectives = get_related_words(keyword, category, ADJECTIVE_RELATIONS)
             cn_keywords, cn_categories = get_related_words(keyword, category, ALL_RELATIONS)
+            cnk = [keyword[0] for keyword in cn_keywords]
+            cnc = [category[0] for category in cn_categories]
+            cn_crosswords = get_cross_relations(cnk, cnc, mode=RUN_MODE)
 
             csv_writer.writerow([keyword, category, d_nouns, d_verbs, d_adjectives,
                                  # to_str(ck_nouns), to_str(cc_nouns), to_str(ck_verbs), to_str(cc_verbs),
                                  # to_str(ck_adjectives), to_str(cc_adjectives),
-                                 to_str(cn_keywords), to_str(cn_categories)])
+                                 to_str(cn_keywords), to_str(cn_categories), to_str_2(cn_crosswords)])
             row_count += 1
             if row_count == 10:
                 break
