@@ -16,7 +16,7 @@ ALL_RELATIONS = ("RelatedTo", "FormOf", "IsA", "PartOf", "HasA", "UsedFor", "Cap
                  "dbpedia/occupation", "dbpedia/language", "dbpedia/field", "dbpedia/product", "dbpedia/capital",
                  "dbpedia/leader")
 
-RUN_MODE = "remote"
+RUN_MODE = "local"
 
 
 # def get_related_words(keyword, category, language="en"):
@@ -62,8 +62,7 @@ def get_related_words_with_weight(keyword_uri, related_words, language="en", mod
     for related_word in related_words:
         related_word_uri = get_uri_for_keyword(related_word, language=language, mode=mode)
         max_relation = get_max_relation(related_word_uri, keyword_uri, mode)
-        if max_relation:
-            related_words_with_weight.append((related_word, max_relation["weight"]))
+        related_words_with_weight.append((related_word, max_relation["weight"]))
     return related_words_with_weight
 
 
@@ -73,8 +72,7 @@ def get_max_relation(node_uri, other_uri, mode):
     for relation in relations:
         if relation["weight"] > max_relation["weight"]:
             max_relation = relation
-    if max_relation["weight"] > 0.0:
-        return max_relation
+    return max_relation
 
 
 def get_words_with_relation(keyword_uri, relation="RelatedTo", language="en", mode="remote"):
@@ -169,12 +167,19 @@ def has_common_relations(relations, other_relations):
 
 def get_cross_relations(keywords, other_keywords, language="en", mode="remote"):
     cross_relations = []
-    for keyword in keywords:
-        for other_keyword in other_keywords:
+    for entry in keywords:
+        keyword = entry[0]
+        keyword_weight = entry[1]
+        if keyword_weight == 0.0:
+            continue
+        for other_entry in other_keywords:
+            other_keyword = other_entry[0]
+            if keyword.lower() == other_keyword.lower():
+                continue
             keyword_uri = get_uri_for_keyword(keyword, language=language, mode=mode)
             other_keyword_uri = get_uri_for_keyword(other_keyword, language=language, mode=mode)
             max_relation = get_max_relation(keyword_uri, other_keyword_uri, mode)
-            if max_relation:
+            if max_relation["weight"] > 0.0:
                 cross_relations.append((keyword, other_keyword, max_relation["weight"]))
     return cross_relations
 
@@ -197,7 +202,8 @@ def compare_interests(filename):
         csv_writer.writerow(['Interest', 'Category', 'Datamuse Nouns', 'Datamuse Verbs', 'Datamuse Adjectives',
                              # 'CN Keyword Nouns', 'CN Category Nouns', 'CN Keyword Verbs', 'CN Category Verbs',
                              # 'CN Keyword Adjectives', 'CN Category Adjectives',
-                             'CN Related Keywords', 'CN Related Categories', 'CN Cross Relations'])
+                             'CN Related Keywords', 'CN Related Categories',
+                             'CN Keywords Loop', 'CN Categories Loop'])
         row_count = 0
         for row in csv_reader:
             keyword = row[0]
@@ -209,14 +215,14 @@ def compare_interests(filename):
             # ck_verbs, cc_verbs = get_related_words(keyword, category, VERB_RELATIONS)
             # ck_adjectives, cc_adjectives = get_related_words(keyword, category, ADJECTIVE_RELATIONS)
             cn_keywords, cn_categories = get_related_words(keyword, category, ALL_RELATIONS)
-            cnk = [keyword[0] for keyword in cn_keywords]
-            cnc = [category[0] for category in cn_categories]
-            cn_crosswords = get_cross_relations(cnk, cnc, mode=RUN_MODE)
+            cn_keywords_loop = get_cross_relations(cn_keywords, cn_categories, mode=RUN_MODE)
+            cn_categories_loop = get_cross_relations(cn_categories, cn_keywords, mode=RUN_MODE)
 
             csv_writer.writerow([keyword, category, d_nouns, d_verbs, d_adjectives,
                                  # to_str(ck_nouns), to_str(cc_nouns), to_str(ck_verbs), to_str(cc_verbs),
                                  # to_str(ck_adjectives), to_str(cc_adjectives),
-                                 to_str(cn_keywords), to_str(cn_categories), to_str_2(cn_crosswords)])
+                                 to_str(cn_keywords), to_str(cn_categories),
+                                 to_str_2(cn_keywords_loop), to_str_2(cn_categories_loop)])
             row_count += 1
             if row_count == 10:
                 break
