@@ -1,5 +1,6 @@
 import csv
 
+import sys
 from conceptnet5.db.query import AssertionFinder
 
 from conceptnet_eval.common import BASE_URL, get_keyword_for_uri, get_response, get_uri_for_keyword
@@ -41,20 +42,29 @@ RUN_MODE = "local"
 #     return related_words
 
 
-def get_related_words(keyword, category, relation_set, language="en"):
-    mode = RUN_MODE
+def get_cn_related_words(keyword, language="en"):
+    node_uri = get_uri_for_keyword(keyword, language=language)
+    url = "{}/related{}?filter=/c/{}".format(BASE_URL, node_uri, language)
+    res = get_response(url)
+    related_words = []
+    for related_node in res["related"]:
+        related_node_uri = related_node["@id"]
+        related_word = get_keyword_for_uri(related_node_uri)
+        if related_word.lower() == keyword.lower():
+            continue
+        related_words.append(related_word)
+    return related_words
+
+
+def get_related_words(keyword, context, relation_set, language="en", mode="remote"):
     related_words = set()
-    related_categories = set()
     keyword_uri = get_uri_for_keyword(keyword, language=language, mode=mode)
-    category_uri = get_uri_for_keyword(category, language=language, mode=mode)
+    context_uri = get_uri_for_keyword(context, language=language, mode=mode)
     for relation in relation_set:
         words_with_relation = get_words_with_relation(keyword_uri, relation, language, mode)
         related_words.update(words_with_relation)
-        categories_with_relation = get_words_with_relation(category_uri, relation, language, mode)
-        related_categories.update(categories_with_relation)
-    related_words_with_weight = get_related_words_with_weight(category_uri, related_words, language, mode)
-    related_categories_with_weight = get_related_words_with_weight(keyword_uri, related_categories, language, mode)
-    return related_words_with_weight, related_categories_with_weight
+    related_words_with_weight = get_related_words_with_weight(context_uri, related_words, language, mode)
+    return related_words_with_weight
 
 
 def get_related_words_with_weight(keyword_uri, related_words, language="en", mode="remote"):
@@ -174,6 +184,9 @@ def get_cross_relations(keywords, other_keywords, language="en", mode="remote"):
             continue
         for other_entry in other_keywords:
             other_keyword = other_entry[0]
+            other_keyword_weight = other_entry[1]
+            if other_keyword_weight > 0.0:
+                continue
             if keyword.lower() == other_keyword.lower():
                 continue
             keyword_uri = get_uri_for_keyword(keyword, language=language, mode=mode)
@@ -182,6 +195,39 @@ def get_cross_relations(keywords, other_keywords, language="en", mode="remote"):
             if max_relation["weight"] > 0.0:
                 cross_relations.append((keyword, other_keyword, max_relation["weight"]))
     return cross_relations
+
+
+def process(source_keyword, category):
+    mode = RUN_MODE
+    all_cn_keywords = []
+    all_cn_categories = []
+    all_related_related_words = []
+    all_cn_keywords_loop = []
+    all_cn_categories_loop = []
+    keywords = seed_keywords(source_keyword)
+    cn_categories = get_related_words(category, source_keyword, ALL_RELATIONS, mode=mode)
+    all_cn_categories.extend(cn_categories)
+    for keyword in keywords:
+        # ck_nouns, cc_nouns = get_related_words(keyword, category, NOUN_RELATIONS)
+        # ck_verbs, cc_verbs = get_related_words(keyword, category, VERB_RELATIONS)
+        # ck_adjectives, cc_adjectives = get_related_words(keyword, category, ADJECTIVE_RELATIONS)
+        cn_keywords = get_related_words(keyword, category, ALL_RELATIONS, mode=mode)
+        all_cn_keywords.extend(cn_keywords)
+        # for cn_keyword in cn_keywords:
+        #     if cn_keyword[1] > 0.0:
+        #         related_words = get_related_words(cn_keyword[0], category, ALL_RELATIONS, mode=mode)
+        #         related_related_words.extend(related_words)
+        cn_keywords_loop = get_cross_relations(cn_categories, cn_keywords, mode=mode)
+        all_cn_keywords_loop.extend(cn_keywords_loop)
+        # cn_categories_loop = get_cross_relations(cn_keywords, cn_categories, mode=mode)
+        # all_cn_categories_loop.extend(cn_categories_loop)
+    return all_cn_keywords, all_cn_categories, all_related_related_words, all_cn_keywords_loop, all_cn_categories_loop
+
+
+def seed_keywords(keyword, language="en"):
+    keywords = [keyword]
+    keywords.extend(get_cn_related_words(keyword, language))
+    return keywords
 
 
 def to_str(tuple_list):
@@ -203,7 +249,7 @@ def compare_interests(filename):
                              # 'CN Keyword Nouns', 'CN Category Nouns', 'CN Keyword Verbs', 'CN Category Verbs',
                              # 'CN Keyword Adjectives', 'CN Category Adjectives',
                              'CN Related Keywords', 'CN Related Categories',
-                             # 'CN Keywords Loop', 'CN Categories Loop',
+                             'CN Keywords Loop', 'CN Categories Loop',
                              'CN Related Related Keywords'
                              ])
         row_count = 0
@@ -213,23 +259,13 @@ def compare_interests(filename):
             d_nouns = row[2]
             d_verbs = row[3]
             d_adjectives = row[4]
-            # ck_nouns, cc_nouns = get_related_words(keyword, category, NOUN_RELATIONS)
-            # ck_verbs, cc_verbs = get_related_words(keyword, category, VERB_RELATIONS)
-            # ck_adjectives, cc_adjectives = get_related_words(keyword, category, ADJECTIVE_RELATIONS)
-            cn_keywords, cn_categories = get_related_words(keyword, category, ALL_RELATIONS)
-            related_related_words = []
-            for cn_keyword in cn_keywords:
-                if cn_keyword[1] > 0.0:
-                    related_words, dummy = get_related_words(cn_keyword[0], category, ALL_RELATIONS)
-                    related_related_words.extend(related_words)
-            cn_keywords_loop = get_cross_relations(cn_keywords, cn_categories, mode=RUN_MODE)
-            cn_categories_loop = get_cross_relations(cn_categories, cn_keywords, mode=RUN_MODE)
-
+            cn_keywords, cn_categories, related_related_words, cn_keywords_loop, cn_categories_loop = process(keyword,
+                                                                                                              category)
             csv_writer.writerow([keyword, category, d_nouns, d_verbs, d_adjectives,
                                  # to_str(ck_nouns), to_str(cc_nouns), to_str(ck_verbs), to_str(cc_verbs),
                                  # to_str(ck_adjectives), to_str(cc_adjectives),
                                  to_str(cn_keywords), to_str(cn_categories),
-                                 # to_str_2(cn_keywords_loop), to_str_2(cn_categories_loop)
+                                 to_str_2(cn_keywords_loop), to_str_2(cn_categories_loop),
                                  to_str(related_related_words)
                                  ])
             row_count += 1
@@ -240,6 +276,7 @@ def compare_interests(filename):
 if __name__ == "__main__":
     # keyword = sys.argv[1]
     # category = sys.argv[2]
-    # related_keywords = get_related_words(keyword, category)
-    # print(related_keywords)
+    # cn_keywords, cn_categories, related_related_words, cn_keywords_loop, cn_categories_loop = process(keyword,
+    #                                                                                                   category)
+    # print(cn_keywords_loop)
     compare_interests('interests.csv')
