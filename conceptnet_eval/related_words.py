@@ -294,9 +294,12 @@ def compare_interests(filename):
 
 
 if __name__ == "__main__":
-    # keyword = sys.argv[1]
-    # category = sys.argv[2]
-    # cn_keywords, cn_categories, related_related_words, cn_keywords_loop, cn_categories_loop = process(keyword,
-    #                                                                                                   category)
-    # print(cn_keywords_loop)
-    compare_interests('interests.csv')
+    args = sys.argv[1:]
+    if args:
+        keyword = args[0]
+        category = args[1]
+        cn_keywords, cn_categories, related_related_words, cn_keywords_loop, cn_categories_loop = process(keyword,
+                                                                                                          category)
+        print(cn_keywords_loop)
+    else:
+        compare_interests('interests.csv')
