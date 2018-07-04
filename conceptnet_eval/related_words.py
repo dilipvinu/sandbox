@@ -52,7 +52,7 @@ def get_cn_related_words(keyword, language="en"):
         related_word = get_keyword_for_uri(related_node_uri)
         if related_word.lower() == keyword.lower():
             continue
-        related_words.append(related_word)
+        related_words.append(related_word.lower().strip())
     return related_words
 
 
@@ -100,7 +100,7 @@ def get_words_with_relation(keyword_uri, relation="RelatedTo", language="en", mo
             other = start
         if other["language"] != language:
             continue
-        related_words.append(other["label"])
+        related_words.append(other["label"].lower().strip())
     print("{} results".format(len(related_words)))
     return related_words
 
@@ -243,9 +243,9 @@ def remove_duplicates(weighted_words):
     words = set()
     unique_weighted_words = []
     for weighted_word in weighted_words:
-        if weighted_word[0] in words:
+        if weighted_word[0].lower().strip() in words:
             continue
-        words.add(weighted_word[0])
+        words.add(weighted_word[0].lower().strip())
         unique_weighted_words.append(weighted_word)
     return unique_weighted_words
 
@@ -274,8 +274,8 @@ def compare_interests(filename):
                              ])
         row_count = 0
         for row in csv_reader:
-            keyword = row[0]
-            category = row[1]
+            keyword = row[0].lower().strip()
+            category = row[1].lower().strip()
             d_nouns = row[2]
             d_verbs = row[3]
             d_adjectives = row[4]
