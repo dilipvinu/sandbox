@@ -252,12 +252,12 @@ def remove_duplicates(weighted_words):
 
 def to_str(tuple_list):
     flat_list = ["{} ({})".format(item[0], item[1]) for item in tuple_list]
-    return ", ".join(flat_list)
+    return "; ".join(flat_list)
 
 
 def to_str_2(tuple_list):
     flat_list = ["{} - {} ({})".format(item[0], item[1], item[2]) for item in tuple_list]
-    return ", ".join(flat_list)
+    return "; ".join(flat_list)
 
 
 def compare_interests(filename):
@@ -265,7 +265,8 @@ def compare_interests(filename):
         csv_reader = csv.reader(in_file, delimiter=',', quotechar='"')
         next(csv_reader)
         csv_writer = csv.writer(out_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        csv_writer.writerow(['Interest', 'Category', 'Datamuse Nouns', 'Datamuse Verbs', 'Datamuse Adjectives',
+        csv_writer.writerow(['Interest', 'Category',
+                             # 'Datamuse Nouns', 'Datamuse Verbs', 'Datamuse Adjectives',
                              # 'CN Keyword Nouns', 'CN Category Nouns', 'CN Keyword Verbs', 'CN Category Verbs',
                              # 'CN Keyword Adjectives', 'CN Category Adjectives',
                              'CN Related Keywords', 'CN Related Categories',
@@ -281,7 +282,8 @@ def compare_interests(filename):
             d_adjectives = row[4]
             cn_keywords, cn_categories, related_related_words, cn_keywords_loop, cn_categories_loop = process(keyword,
                                                                                                               category)
-            csv_writer.writerow([keyword, category, d_nouns, d_verbs, d_adjectives,
+            csv_writer.writerow([keyword, category,
+                                 # d_nouns, d_verbs, d_adjectives,
                                  # to_str(ck_nouns), to_str(cc_nouns), to_str(ck_verbs), to_str(cc_verbs),
                                  # to_str(ck_adjectives), to_str(cc_adjectives),
                                  to_str(cn_keywords), to_str(cn_categories),
