@@ -271,7 +271,8 @@ def compare_interests(filename):
                              # 'CN Keyword Adjectives', 'CN Category Adjectives',
                              'CN Related Keywords', 'CN Related Categories',
                              'CN Keywords Loop', 'CN Categories Loop',
-                             'CN Related Related Keywords'
+                             'CN Related Related Keywords',
+                             'CN Final Words'
                              ])
         row_count = 0
         for row in csv_reader:
@@ -282,13 +283,24 @@ def compare_interests(filename):
             d_adjectives = row[4]
             cn_keywords, cn_categories, related_related_words, cn_keywords_loop, cn_categories_loop = process(keyword,
                                                                                                               category)
+            final_words = set()
+            final_list = []
+            for cn_keyword in cn_keywords:
+                if cn_keyword[0] not in final_words and cn_keyword[-1] > 0.0:
+                    final_words.add(cn_keyword[0].lower().strip())
+                    final_list.append(cn_keyword)
+            for cn_keyword in cn_keywords_loop:
+                if cn_keyword[0] not in final_words and cn_keyword[-1] > 0.0:
+                    final_words.add(cn_keyword[0].lower().strip())
+                    final_list.append((cn_keyword[0], cn_keyword[-1]))
             csv_writer.writerow([keyword, category,
                                  # d_nouns, d_verbs, d_adjectives,
                                  # to_str(ck_nouns), to_str(cc_nouns), to_str(ck_verbs), to_str(cc_verbs),
                                  # to_str(ck_adjectives), to_str(cc_adjectives),
                                  to_str(cn_keywords), to_str(cn_categories),
                                  to_str_2(cn_keywords_loop), to_str_2(cn_categories_loop),
-                                 to_str(related_related_words)
+                                 to_str(related_related_words),
+                                 to_str(final_list)
                                  ])
             row_count += 1
             if row_count == 10:
