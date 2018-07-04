@@ -62,6 +62,8 @@ def get_related_words(keyword, context, relation_set, language="en", mode="remot
     context_uri = get_uri_for_keyword(context, language=language, mode=mode)
     for relation in relation_set:
         words_with_relation = get_words_with_relation(keyword_uri, relation, language, mode)
+        # remove occurrences of keyword from related words
+        words_with_relation = filter(lambda word: word.lower() != keyword.lower(), words_with_relation)
         related_words.update(words_with_relation)
     related_words_with_weight = get_related_words_with_weight(context_uri, related_words, language, mode)
     return related_words_with_weight
@@ -199,28 +201,31 @@ def get_cross_relations(keywords, other_keywords, language="en", mode="remote"):
 
 def process(source_keyword, category):
     mode = RUN_MODE
+    # ck_nouns, cc_nouns = get_related_words(keyword, category, NOUN_RELATIONS)
+    # ck_verbs, cc_verbs = get_related_words(keyword, category, VERB_RELATIONS)
+    # ck_adjectives, cc_adjectives = get_related_words(keyword, category, ADJECTIVE_RELATIONS)
     all_cn_keywords = []
     all_cn_categories = []
     all_related_related_words = []
     all_cn_keywords_loop = []
     all_cn_categories_loop = []
     keywords = seed_keywords(source_keyword)
-    cn_categories = get_related_words(category, source_keyword, ALL_RELATIONS, mode=mode)
-    all_cn_categories.extend(cn_categories)
+    print("{} keywords seeded".format(len(keywords)))
     for keyword in keywords:
-        # ck_nouns, cc_nouns = get_related_words(keyword, category, NOUN_RELATIONS)
-        # ck_verbs, cc_verbs = get_related_words(keyword, category, VERB_RELATIONS)
-        # ck_adjectives, cc_adjectives = get_related_words(keyword, category, ADJECTIVE_RELATIONS)
         cn_keywords = get_related_words(keyword, category, ALL_RELATIONS, mode=mode)
         all_cn_keywords.extend(cn_keywords)
-        # for cn_keyword in cn_keywords:
-        #     if cn_keyword[1] > 0.0:
-        #         related_words = get_related_words(cn_keyword[0], category, ALL_RELATIONS, mode=mode)
-        #         related_related_words.extend(related_words)
-        cn_keywords_loop = get_cross_relations(cn_categories, cn_keywords, mode=mode)
-        all_cn_keywords_loop.extend(cn_keywords_loop)
-        # cn_categories_loop = get_cross_relations(cn_keywords, cn_categories, mode=mode)
-        # all_cn_categories_loop.extend(cn_categories_loop)
+        cn_categories = get_related_words(category, keyword, ALL_RELATIONS, mode=mode)
+        all_cn_categories.extend(cn_categories)
+    all_cn_keywords.sort(key=take_weight, reverse=True)
+    all_cn_categories.sort(key=take_weight, reverse=True)
+    all_cn_keywords = remove_duplicates(all_cn_keywords)
+    all_cn_categories = remove_duplicates(all_cn_categories)
+    # for cn_keyword in all_cn_keywords:
+    #     if cn_keyword[1] > 0.0:
+    #         related_words = get_related_words(cn_keyword[0], category, ALL_RELATIONS, mode=mode)
+    #         related_related_words.extend(related_words)
+    all_cn_keywords_loop.extend(get_cross_relations(all_cn_categories, all_cn_keywords, mode=mode))
+    # all_cn_categories_loop.extend(get_cross_relations(all_cn_keywords, all_cn_categories, mode=mode))
     return all_cn_keywords, all_cn_categories, all_related_related_words, all_cn_keywords_loop, all_cn_categories_loop
 
 
@@ -228,6 +233,21 @@ def seed_keywords(keyword, language="en"):
     keywords = [keyword]
     keywords.extend(get_cn_related_words(keyword, language))
     return keywords
+
+
+def take_weight(item):
+    return item[-1]
+
+
+def remove_duplicates(weighted_words):
+    words = set()
+    unique_weighted_words = []
+    for weighted_word in weighted_words:
+        if weighted_word[0] in words:
+            continue
+        words.add(weighted_word[0])
+        unique_weighted_words.append(weighted_word)
+    return unique_weighted_words
 
 
 def to_str(tuple_list):
