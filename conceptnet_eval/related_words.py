@@ -195,7 +195,7 @@ def get_cross_relations(keywords, other_keywords, language="en", mode="remote"):
             other_keyword_uri = get_uri_for_keyword(other_keyword, language=language, mode=mode)
             max_relation = get_max_relation(keyword_uri, other_keyword_uri, mode)
             if max_relation["weight"] > 0.0:
-                cross_relations.append((keyword, other_keyword, max_relation["weight"]))
+                cross_relations.append((other_keyword, keyword, max_relation["weight"]))
     return cross_relations
 
 
