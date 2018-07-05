@@ -303,8 +303,6 @@ def compare_interests(filename):
                                  to_str(final_list)
                                  ])
             row_count += 1
-            if row_count == 10:
-                break
 
 
 if __name__ == "__main__":
