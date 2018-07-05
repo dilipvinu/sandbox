@@ -44,7 +44,7 @@ RUN_MODE = "local"
 
 def get_cn_related_words(keyword, language="en"):
     node_uri = get_uri_for_keyword(keyword, language=language)
-    url = "{}/related{}?filter=/c/{}".format(BASE_URL, node_uri, language)
+    url = "{}/related{}?filter=/c/{}&limit=1000".format(BASE_URL, node_uri, language)
     res = get_response(url)
     related_words = []
     for related_node in res["related"]:
