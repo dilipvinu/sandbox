@@ -211,11 +211,11 @@ def process(source_keyword, category):
     all_cn_categories_loop = []
     keywords = seed_keywords(source_keyword)
     print("{} keywords seeded".format(len(keywords)))
+    cn_categories = get_related_words(category, source_keyword, ALL_RELATIONS, mode=mode)
+    all_cn_categories.extend(cn_categories)
     for keyword in keywords:
         cn_keywords = get_related_words(keyword, category, ALL_RELATIONS, mode=mode)
         all_cn_keywords.extend(cn_keywords)
-        cn_categories = get_related_words(category, keyword, ALL_RELATIONS, mode=mode)
-        all_cn_categories.extend(cn_categories)
     all_cn_keywords.sort(key=take_weight, reverse=True)
     all_cn_categories.sort(key=take_weight, reverse=True)
     all_cn_keywords = remove_duplicates(all_cn_keywords)
@@ -303,6 +303,8 @@ def compare_interests(filename):
                                  to_str(final_list)
                                  ])
             row_count += 1
+            if row_count == 10:
+                break
 
 
 if __name__ == "__main__":
