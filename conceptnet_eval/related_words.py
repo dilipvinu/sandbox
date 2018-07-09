@@ -42,9 +42,9 @@ RUN_MODE = "local"
 #     return related_words
 
 
-def get_cn_related_words(keyword, language="en"):
+def get_cn_related_words(keyword, language="en", limit=1000):
     node_uri = get_uri_for_keyword(keyword, language=language)
-    url = "{}/related{}?filter=/c/{}&limit=1000".format(BASE_URL, node_uri, language)
+    url = "{}/related{}?filter=/c/{}&limit={}".format(BASE_URL, node_uri, language, limit)
     res = get_response(url)
     related_words = []
     for related_node in res["related"]:
@@ -214,7 +214,7 @@ def process(source_keyword, category):
     for keyword in keywords:
         cn_keywords = get_related_words(keyword, category, ALL_RELATIONS, mode=mode)
         all_cn_keywords.extend(cn_keywords)
-        cn_categories = get_related_words(category, source_keyword, ALL_RELATIONS, mode=mode)
+        cn_categories = get_related_words(category, keyword, ALL_RELATIONS, mode=mode)
         all_cn_categories.extend(cn_categories)
     all_cn_keywords.sort(key=take_weight, reverse=True)
     all_cn_categories.sort(key=take_weight, reverse=True)
@@ -232,10 +232,10 @@ def process(source_keyword, category):
 def seed_keywords(keyword, language="en"):
     keywords = set()
     keywords.add(keyword)
-    related_keywords = get_cn_related_words(keyword, language)
+    related_keywords = get_cn_related_words(keyword, language, limit=100)
     keywords.update(related_keywords)
     for related_keyword in related_keywords:
-        related_related_keywords = get_cn_related_words(related_keyword, language)
+        related_related_keywords = get_cn_related_words(related_keyword, language, limit=25)
         keywords.update(related_related_keywords)
     return keywords
 
