@@ -18,6 +18,7 @@ ALL_RELATIONS = ("RelatedTo", "FormOf", "IsA", "PartOf", "HasA", "UsedFor", "Cap
                  "dbpedia/leader")
 
 RUN_MODE = "local"
+MAX_ROWS = 1000
 
 
 # def get_related_words(keyword, category, language="en"):
@@ -308,7 +309,7 @@ def compare_interests(filename):
                                  to_str(final_list)
                                  ])
             row_count += 1
-            if row_count == 10:
+            if row_count >= MAX_ROWS:
                 break
 
 
@@ -321,4 +322,4 @@ if __name__ == "__main__":
                                                                                                           category)
         print(cn_keywords_loop)
     else:
-        compare_interests('interests.csv')
+        compare_interests('interests_1000.csv')
