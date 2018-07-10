@@ -235,9 +235,9 @@ def seed_keywords(keyword, language="en"):
     keywords.add(keyword)
     related_keywords = get_cn_related_words(keyword, language, limit=100)
     keywords.update(related_keywords)
-    for related_keyword in related_keywords:
-        related_related_keywords = get_cn_related_words(related_keyword, language, limit=25)
-        keywords.update(related_related_keywords)
+    # for related_keyword in related_keywords:
+    #     related_related_keywords = get_cn_related_words(related_keyword, language, limit=25)
+    #     keywords.update(related_related_keywords)
     return keywords
 
 
