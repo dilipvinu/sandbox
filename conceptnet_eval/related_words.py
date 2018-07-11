@@ -180,6 +180,7 @@ def has_common_relations(relations, other_relations):
 
 def get_cross_relations(keywords, other_keywords, language="en", mode="remote"):
     cross_relations = []
+    successful_words = set()
     for entry in keywords:
         keyword = entry[0]
         keyword_weight = entry[1]
@@ -192,11 +193,14 @@ def get_cross_relations(keywords, other_keywords, language="en", mode="remote"):
                 continue
             if keyword.lower() == other_keyword.lower():
                 continue
+            if other_keyword in successful_words:
+                continue
             keyword_uri = get_uri_for_keyword(keyword, language=language, mode=mode)
             other_keyword_uri = get_uri_for_keyword(other_keyword, language=language, mode=mode)
             max_relation = get_max_relation(keyword_uri, other_keyword_uri, mode)
             if max_relation["weight"] > 0.0:
                 cross_relations.append((other_keyword, keyword, max_relation["weight"]))
+                successful_words.add(other_keyword)
     return cross_relations
 
 
@@ -210,7 +214,8 @@ def process(source_keyword, category):
     all_related_related_words = []
     all_cn_keywords_loop = []
     all_cn_categories_loop = []
-    keywords = seed_keywords(source_keyword)
+    root_keyword = get_root_word(source_keyword, mode=mode)
+    keywords = seed_keywords(root_keyword)
     print("{} keywords seeded".format(len(keywords)))
     for keyword in keywords:
         cn_keywords = get_related_words(keyword, category, ALL_RELATIONS, mode=mode)
@@ -239,6 +244,20 @@ def seed_keywords(keyword, language="en"):
     #     related_related_keywords = get_cn_related_words(related_keyword, language, limit=25)
     #     keywords.update(related_related_keywords)
     return keywords
+
+
+def get_root_word(keyword, language="en", mode="remote"):
+    print("Getting root word of {}".format(keyword))
+    keyword_uri = get_uri_for_keyword(keyword, language, mode)
+    edges = get_related(keyword_uri, "FormOf", mode)
+    for edge in edges:
+        end = edge["end"]
+        if end["language"] != language:
+            continue
+        if end["@id"] == keyword_uri or end["term"] == keyword_uri:
+            return keyword
+        return end["label"]
+    return keyword
 
 
 def take_weight(item):

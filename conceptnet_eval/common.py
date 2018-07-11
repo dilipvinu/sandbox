@@ -16,7 +16,7 @@ def get_uri_for_keyword(keyword, language="en", mode="remote"):
             return res["@id"]
         except RuntimeError:
             pass
-    return "/c/{}/{}".format(language, keyword.lower().replace(" ", "_"))
+    return "/c/{}/{}".format(language, keyword.lower().replace(" ", "_").replace("-", "_"))
 
 
 def get_keyword_for_uri(uri):
@@ -28,7 +28,7 @@ def get_response(url, retry=0):
     try:
         res = requests.get(url)
         if res.status_code != 200:
-            raise RuntimeError("Server error " + res.status_code)
+            raise RuntimeError("Server error {}".format(res.status_code))
         return res.json()
     except ConnectionError:
         if retry < MAX_RETRIES:
