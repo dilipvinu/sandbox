@@ -1,6 +1,8 @@
 import csv
 
 import sys
+
+import requests
 from conceptnet5.db.query import AssertionFinder
 
 from conceptnet_eval.common import BASE_URL, get_keyword_for_uri, get_response, get_uri_for_keyword
@@ -18,7 +20,7 @@ ALL_RELATIONS = ("RelatedTo", "FormOf", "IsA", "PartOf", "HasA", "UsedFor", "Cap
                  "dbpedia/leader")
 
 RUN_MODE = "local"
-MAX_ROWS = 1000
+MAX_ROWS = 10
 
 
 # def get_related_words(keyword, category, language="en"):
@@ -66,7 +68,10 @@ def get_related_words(keyword, context, relation_set, language="en", mode="remot
         # remove occurrences of keyword from related words
         words_with_relation = filter(lambda word: word.lower() != keyword.lower(), words_with_relation)
         related_words.update(words_with_relation)
-    related_words_with_weight = get_related_words_with_weight(context_uri, related_words, language, mode)
+    if keyword == context:
+        related_words_with_weight = [(related_word, 1.0) for related_word in related_words]
+    else:
+        related_words_with_weight = get_related_words_with_weight(context_uri, related_words, language, mode)
     return related_words_with_weight
 
 
@@ -214,24 +219,26 @@ def process(source_keyword, category):
     all_related_related_words = []
     all_cn_keywords_loop = []
     all_cn_categories_loop = []
-    root_keyword = get_root_word(source_keyword, mode=mode)
-    keywords = seed_keywords(root_keyword)
-    print("{} keywords seeded".format(len(keywords)))
-    for keyword in keywords:
-        cn_keywords = get_related_words(keyword, category, ALL_RELATIONS, mode=mode)
-        all_cn_keywords.extend(cn_keywords)
-        cn_categories = get_related_words(category, keyword, ALL_RELATIONS, mode=mode)
-        all_cn_categories.extend(cn_categories)
-    all_cn_keywords.sort(key=take_weight, reverse=True)
-    all_cn_categories.sort(key=take_weight, reverse=True)
-    all_cn_keywords = remove_duplicates(all_cn_keywords)
-    all_cn_categories = remove_duplicates(all_cn_categories)
-    # for cn_keyword in all_cn_keywords:
-    #     if cn_keyword[1] > 0.0:
-    #         related_words = get_related_words(cn_keyword[0], category, ALL_RELATIONS, mode=mode)
-    #         related_related_words.extend(related_words)
-    all_cn_keywords_loop.extend(get_cross_relations(all_cn_categories, all_cn_keywords, mode=mode))
-    # all_cn_categories_loop.extend(get_cross_relations(all_cn_keywords, all_cn_categories, mode=mode))
+    valid_keyword = validate_word(source_keyword)
+    if valid_keyword:
+        root_keyword = get_root_word(valid_keyword, mode=mode)
+        keywords = seed_keywords(root_keyword)
+        print("{} keywords seeded".format(len(keywords)))
+        for keyword in keywords:
+            cn_keywords = get_related_words(keyword, category, ALL_RELATIONS, mode=mode)
+            all_cn_keywords.extend(cn_keywords)
+            cn_categories = get_related_words(category, keyword, ALL_RELATIONS, mode=mode)
+            all_cn_categories.extend(cn_categories)
+        all_cn_keywords.sort(key=take_weight, reverse=True)
+        all_cn_categories.sort(key=take_weight, reverse=True)
+        all_cn_keywords = remove_duplicates(all_cn_keywords)
+        all_cn_categories = remove_duplicates(all_cn_categories)
+        # for cn_keyword in all_cn_keywords:
+        #     if cn_keyword[1] > 0.0:
+        #         related_words = get_related_words(cn_keyword[0], category, ALL_RELATIONS, mode=mode)
+        #         related_related_words.extend(related_words)
+        all_cn_keywords_loop.extend(get_cross_relations(all_cn_categories, all_cn_keywords, mode=mode))
+        # all_cn_categories_loop.extend(get_cross_relations(all_cn_keywords, all_cn_categories, mode=mode))
     return all_cn_keywords, all_cn_categories, all_related_related_words, all_cn_keywords_loop, all_cn_categories_loop
 
 
@@ -258,6 +265,35 @@ def get_root_word(keyword, language="en", mode="remote"):
             return keyword
         return end["label"]
     return keyword
+
+
+def is_valid_word(keyword):
+    keyword_uri = get_uri_for_keyword(keyword)
+    params = {
+        "node": keyword_uri
+    }
+    edges = query(params, mode=RUN_MODE)
+    return len(edges) > 0
+
+
+def validate_word(keyword):
+    if is_valid_word(keyword):
+        return keyword
+    url = "http://lookup.dbpedia.org/api/search/KeywordSearch"
+    params = {"QueryString": keyword}
+    headers = {"Accept": "application/json"}
+    response = requests.get(url, params=params, headers=headers)
+    if response.status_code != 200:
+        print("DBpedia lookup error for {}".format(keyword))
+        return
+    results = response.json()["results"]
+    if not results:
+        print("No DBpedia results for {}".format(keyword))
+        return
+    alt_keyword = results[0]["label"].lower().strip()
+    if is_valid_word(alt_keyword):
+        return alt_keyword
+    print("Node does not exist for DBpedia result {} for {}".format(alt_keyword, keyword))
 
 
 def take_weight(item):
