@@ -20,7 +20,8 @@ ALL_RELATIONS = ("RelatedTo", "FormOf", "IsA", "PartOf", "HasA", "UsedFor", "Cap
                  "dbpedia/leader")
 
 RUN_MODE = "local"
-MAX_ROWS = 10
+ROW_OFFSET = 0
+ROW_LIMIT = 10
 
 
 # def get_related_words(keyword, category, language="en"):
@@ -290,10 +291,11 @@ def validate_word(keyword):
     if not results:
         print("No DBpedia results for {}".format(keyword))
         return
-    alt_keyword = results[0]["label"].lower().strip()
-    if is_valid_word(alt_keyword):
-        return alt_keyword
-    print("Node does not exist for DBpedia result {} for {}".format(alt_keyword, keyword))
+    for result in results:
+        alt_keyword = result["label"].lower().strip()
+        if is_valid_word(alt_keyword):
+            return alt_keyword
+    print("Node does not exist for DBpedia result for {}".format(keyword))
 
 
 def take_weight(item):
@@ -325,7 +327,7 @@ def compare_interests(filename):
     with open(filename, 'r') as in_file, open('related_words.csv', 'w') as out_file:
         csv_reader = csv.reader(in_file, delimiter=',', quotechar='"')
         next(csv_reader)
-        csv_writer = csv.writer(out_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        csv_writer = csv.writer(out_file, dialect='excel', delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow(['Interest', 'Category',
                              # 'Datamuse Nouns', 'Datamuse Verbs', 'Datamuse Adjectives',
                              # 'CN Keyword Nouns', 'CN Category Nouns', 'CN Keyword Verbs', 'CN Category Verbs',
@@ -335,8 +337,14 @@ def compare_interests(filename):
                              'CN Related Related Keywords',
                              'CN Final Words'
                              ])
+        max_rows = ROW_OFFSET + ROW_LIMIT
         row_count = 0
         for row in csv_reader:
+            row_count += 1
+            if row_count <= ROW_OFFSET:
+                continue
+            if row_count > max_rows:
+                break
             keyword = row[0].lower().strip()
             category = row[1].lower().strip()
             d_nouns = row[2]
@@ -363,9 +371,6 @@ def compare_interests(filename):
                                  to_str(related_related_words),
                                  to_str(final_list)
                                  ])
-            row_count += 1
-            if row_count >= MAX_ROWS:
-                break
 
 
 if __name__ == "__main__":
